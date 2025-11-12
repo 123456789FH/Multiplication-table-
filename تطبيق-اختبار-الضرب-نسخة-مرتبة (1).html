@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>اختبار جدول الضرب — نسخة مرتّبة</title>
+<style>
+  :root{
+    --primary:#6366f1; --secondary:#7c3aed; --surface:#f8fafc; --text:#1f2937; --muted:#6b7280;
+    --good:#16a34a; --bad:#ef4444; --accent:#10b981;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui, -apple-system, "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .app{
+    background:#fff; width:min(980px,100%); border-radius:24px; box-shadow:0 24px 64px rgba(0,0,0,.25);
+    padding:28px 28px 40px; position:relative; overflow:hidden;
+  }
+  header{ text-align:center; margin-bottom:8px }
+  header img.logo{ width:160px; height:auto; border-radius:14px; box-shadow:0 6px 14px rgba(0,0,0,.12); display:block; margin:0 auto 10px; }
+  h1{ margin:6px 0 4px; color:var(--primary); font-size:32px }
+  p.sub{ margin:0; color:var(--muted) }
+
+  /* Tabs */
+  .tabs{ display:flex; gap:8px; justify-content:center; margin:14px 0 14px }
+  .tab-btn{ padding:10px 16px; border-radius:12px; border:2px solid #e5e7eb; background:#fff; cursor:pointer; font-weight:700 }
+  .tab-btn.active{ background:linear-gradient(135deg,var(--primary),var(--secondary)); border-color:transparent; color:#fff }
+
+  /* Toolbar */
+  .toolbar{ display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; margin:6px 0 12px }
+  .toolbar select{ padding:10px 14px; border:2px solid #e5e7eb; border-radius:12px; font-weight:600 }
+
+  /* Fixed grid layout */
+  .grid{ display:grid; gap:14px; margin:12px auto; width:min(820px,100%); }
+  .grid.fixed{ grid-template-columns:repeat(6, minmax(0,1fr)); }
+  @media (max-width: 1024px){ .grid.fixed{ grid-template-columns:repeat(4, minmax(0,1fr)); } }
+  @media (max-width: 640px){ .grid.fixed{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+
+  .card{
+    background:linear-gradient(135deg,var(--primary),var(--secondary)); color:#fff; border:none; padding:18px 12px; border-radius:16px;
+    font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.15); font-size:22px; text-align:center;
+  }
+  .card.is-selected{ outline:4px solid var(--accent); box-shadow:0 0 0 3px rgba(16,185,129,.35) inset }
+
+  .muted{ color:var(--muted) }
+
+  /* Quiz */
+  .bar{ background:#e5e7eb; height:12px; border-radius:8px; overflow:hidden; margin:10px 0 }
+  .bar>span{ display:block; height:100%; width:0%; background:var(--primary); transition:width .3s }
+  .score{ font-weight:800; color:var(--text); margin:6px 0 10px }
+  .qbox{ background:var(--surface); border:3px solid var(--primary); border-radius:16px; padding:26px; margin-top:6px; }
+  .q{ font-size:40px; margin:0 0 10px; font-weight:900; color:#111827; direction:ltr; text-align:center }
+  .ans{ font-size:32px; width:220px; text-align:center; padding:10px 14px; border:3px solid #d1d5db; border-radius:12px; display:block; margin:0 auto }
+  .row{ margin-top:12px; text-align:center }
+  .btn{ background:var(--primary); border:none; color:#fff; padding:12px 22px; border-radius:12px; font-weight:800; cursor:pointer; margin:6px }
+  .btn.secondary{ background:#6b7280 }
+  .fb{ display:none; font-weight:900; margin-top:10px; padding:10px 14px; border-radius:12px; text-align:center }
+  .fb.ok{ display:block; background:#dcfce7; color:#14532d }
+  .fb.no{ display:block; background:#fee2e2; color:#7f1d1d }
+
+  /* Results */
+  .results{ display:none }
+  .list{ max-height:320px; overflow:auto; border:1px dashed #e5e7eb; border-radius:12px; padding:10px }
+  .item{ padding:10px; border-radius:10px; margin:6px 0; background:#f9fafb; border-right:6px solid #e5e7eb }
+  .item.ok{ border-right-color:#22c55e } .item.no{ border-right-color:#ef4444 }
+
+  /* Print area setup */
+  .print-wrap{ width:min(820px,100%); margin:0 auto }
+  .print-opts{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:center }
+  .print-btn{ background:var(--accent) }
+
+  /* Printable */
+  @page{ size:A4; margin:12mm }
+  .print-area{ display:none }
+  .sheet-title{ text-align:center; border-bottom:3px solid var(--primary); padding-bottom:10px; margin-bottom:14px }
+  .sheet-title h2{ margin:0 0 6px }
+  .sheet-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px }
+  .sheet-q{ background:#f3f4f6; border:2px solid #d1d5db; border-radius:8px; padding:10px; font-size:18px; text-align:center }
+  .line{ display:inline-block; min-width:90px; border-bottom:2px solid #111827; margin-inline-start:8px }
+  .page-break{ break-after:page; page-break-after:always }
+
+  .credits{ margin-top:16px; text-align:center; color:#374151 }
+  .credits strong{ color:#111827 }
+
+  /* Print rules */
+  @media print{
+    body{ background:#fff; padding:0 }
+    .app, .tabs, .no-print{ display:none !important }
+    .print-area{ display:block !important }
+  }
+</style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <img class="logo" src="https://i.top4top.io/p_35930g1tw1.png" alt="شعار ملتقى التعليم التفاعلي" onerror="this.style.display='none';">
+      <h1>اختبار جدول الضرب</h1>
+      <p class="sub">اختاري: <span class="muted">التدرب أو طباعة ورقة عمل</span></p>
+    </header>
+
+    <nav class="tabs no-print">
+      <button class="tab-btn active" id="tab-train">التدرب</button>
+      <button class="tab-btn" id="tab-print">الطباعة</button>
+    </nav>
+
+    <!-- Train -->
+    <section id="panel-train">
+      <div class="toolbar">
+        <label for="qc">عدد الأسئلة:</label>
+        <select id="qc">
+          <option value="11">كل الحقائق (٠–١٠)</option>
+          <option value="10" selected>١٠</option>
+          <option value="15">١٥</option>
+          <option value="20">٢٠</option>
+        </select>
+      </div>
+
+      <div class="grid fixed" id="tables-grid">
+        <button class="card" data-table="0">جدول ٠</button>
+        <button class="card" data-table="1">جدول ١</button>
+        <button class="card" data-table="2">جدول ٢</button>
+        <button class="card" data-table="3">جدول ٣</button>
+        <button class="card" data-table="4">جدول ٤</button>
+        <button class="card" data-table="5">جدول ٥</button>
+        <button class="card" data-table="6">جدول ٦</button>
+        <button class="card" data-table="7">جدول ٧</button>
+        <button class="card" data-table="8">جدول ٨</button>
+        <button class="card" data-table="9">جدول ٩</button>
+        <button class="card" data-table="10">جدول ١٠</button>
+      </div>
+
+      <div id="quiz" class="no-print" style="display:none">
+        <div class="bar"><span id="bar"></span></div>
+        <div class="score" id="score">النتيجة: ٠ / ٠</div>
+        <div class="qbox">
+          <p class="q" id="q">٥ × ٣ = ؟</p>
+          <input id="ans" class="ans" type="number" dir="ltr" inputmode="numeric" placeholder="؟">
+          <div id="fb" class="fb"></div>
+          <div class="row">
+            <button id="btn-check" class="btn">تحقق من الإجابة</button>
+            <button id="btn-next" class="btn" style="display:none">السؤال التالي</button>
+            <button id="btn-results" class="btn" style="display:none">عرض النتائج</button>
+            <button id="btn-change" class="btn secondary">تغيير الجدول</button>
+          </div>
+        </div>
+
+        <div class="results" id="results">
+          <h3 style="margin:12px 0; text-align:center">النتيجة النهائية</h3>
+          <div id="final" class="score" style="text-align:center"></div>
+          <div class="list" id="list"></div>
+          <div class="row">
+            <button id="btn-restart" class="btn">اختبار جديد</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Print -->
+    <section id="panel-print" style="display:none">
+      <div class="print-wrap">
+        <h3 style="text-align:center;margin:6px 0 8px">اختر جدول الطباعة</h3>
+        <div id="print-grid" class="grid fixed" style="grid-template-columns:repeat(6,minmax(0,1fr))">
+          <button class="card" data-ptable="0">٠</button>
+          <button class="card" data-ptable="1">١</button>
+          <button class="card" data-ptable="2">٢</button>
+          <button class="card" data-ptable="3">٣</button>
+          <button class="card" data-ptable="4">٤</button>
+          <button class="card" data-ptable="5">٥</button>
+          <button class="card" data-ptable="6">٦</button>
+          <button class="card" data-ptable="7">٧</button>
+          <button class="card" data-ptable="8">٨</button>
+          <button class="card" data-ptable="9">٩</button>
+          <button class="card" data-ptable="10">١٠</button>
+        </div>
+
+        <div class="toolbar" style="margin-top:4px">
+          <label for="pc">عدد الأسئلة:</label>
+          <select id="pc">
+            <option value="22" selected>نسخة قياسية (٠–١٠ مرتين = ٢٢)</option>
+            <option value="11">نسخة مختصرة (٠–١٠ مرة واحدة = ١١)</option>
+            <option value="20">٢٠</option>
+          </select>
+          <label><input type="checkbox" id="only-questions"> أسئلة فقط (بدون صفحة الإجابات)</label>
+        </div>
+
+        <div style="text-align:center;margin-top:2px">
+          <button id="btn-print" class="btn print-btn no-print">إنشاء ورقة العمل وطباعتها</button>
+          <div class="muted" id="print-chosen" style="margin-top:6px"></div>
+        </div>
+
+        <div class="credits">
+          <p><strong>تصميم :أ/فاطمة هزازي</strong></p>
+          <p>ملتقى معلمي ومعلمات الرياضيات — ملتقى التعليم التفاعلي</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Print-only area -->
+  <div id="print-area" class="print-area"></div>
+
+<script>
+  const ar = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  const toAr = (n)=>String(n).split('').map(ch=>(ch>='0'&&ch<='9')? ar[+ch] : ch).join('');
+  const fromAr = (s)=>{ let out=''; for(const ch of String(s)){ const i=ar.indexOf(ch); out+=(i>-1? i : ch) } const v=parseInt(out,10); return Number.isFinite(v)? v : NaN; };
+
+  // Tabs
+  const tabTrain = document.getElementById('tab-train');
+  const tabPrint = document.getElementById('tab-print');
+  const panelTrain = document.getElementById('panel-train');
+  const panelPrint = document.getElementById('panel-print');
+  tabTrain.addEventListener('click', ()=>{ tabTrain.classList.add('active'); tabPrint.classList.remove('active'); panelTrain.style.display='block'; panelPrint.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); });
+  tabPrint.addEventListener('click', ()=>{ tabPrint.classList.add('active'); tabTrain.classList.remove('active'); panelPrint.style.display='block'; panelTrain.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); });
+
+  // Training
+  const grid = document.getElementById('tables-grid');
+  const qcSel = document.getElementById('qc');
+  const quiz = document.getElementById('quiz');
+  const qEl = document.getElementById('q');
+  const ansEl = document.getElementById('ans');
+  const bar = document.getElementById('bar');
+  const scoreEl = document.getElementById('score');
+  const fb = document.getElementById('fb');
+  const btnCheck = document.getElementById('btn-check');
+  const btnNext = document.getElementById('btn-next');
+  const btnResults = document.getElementById('btn-results');
+  const btnChange = document.getElementById('btn-change');
+  const results = document.getElementById('results');
+  const finalScore = document.getElementById('final');
+  const list = document.getElementById('list');
+
+  let selectedTable=null, pool=[], idx=0, ok=0, total=10, cur1=0, cur2=0, curAns=0, session=[];
+
+  const buildPool=(count)=>{
+    const base=Array.from({length:11},(_,i)=>i); const arr=[];
+    while(arr.length<count){ const s=base.slice().sort(()=>Math.random()-.5); arr.push(...s); }
+    return arr.slice(0,count);
+  };
+  const startQuiz=(t)=>{
+    selectedTable=t; total=parseInt(qcSel.value,10)||10; pool=buildPool(total); idx=0; ok=0; session=[];
+    quiz.style.display='block'; results.style.display='none'; updateScore(); nextQ();
+    window.scrollTo({top:quiz.getBoundingClientRect().top + window.scrollY - 40, behavior:'smooth'});
+  };
+  const nextQ=()=>{
+    cur1=selectedTable; cur2=pool[idx] ?? Math.floor(Math.random()*11); curAns=cur1*cur2;
+    qEl.textContent = `${toAr(cur1)} × ${toAr(cur2)} = ؟`; ansEl.value=''; ansEl.focus();
+    fb.className='fb'; fb.style.display='none'; fb.textContent='';
+  };
+  const updateScore=()=>{ scoreEl.textContent=`النتيجة: ${toAr(ok)} / ${toAr(idx)}`; bar.style.width=(idx/total*100)+'%'; };
+  const check=()=>{
+    const raw=ansEl.value; if(raw===''){ fb.textContent='الرجاء إدخال إجابة'; fb.className='fb no'; fb.style.display='block'; return; }
+    const v=fromAr(raw); if(!Number.isFinite(v)){ fb.textContent='الرجاء إدخال رقم صحيح'; fb.className='fb no'; fb.style.display='block'; return; }
+    const good=(v===curAns); if(good){ ok++; fb.textContent='🎉 إجابة صحيحة! ممتاز!'; fb.className='fb ok'; } else { fb.textContent=`❌ الإجابة الصحيحة: ${toAr(curAns)}`; fb.className='fb no'; }
+    fb.style.display='block'; idx++; session.push({q:`${toAr(cur1)} × ${toAr(cur2)}`, ua:toAr(v), ca:toAr(curAns), ok:good}); updateScore();
+    btnCheck.style.display='none'; if(idx<total){ btnNext.style.display='inline-block'; } else { btnResults.style.display='inline-block'; }
+  };
+  const showResults=()=>{
+    results.style.display='block'; finalScore.textContent=`${toAr(ok)} من ${toAr(total)} (${toAr(Math.round(ok/total*100))}٪)`;
+    list.innerHTML=''; for(const r of session){ const d=document.createElement('div'); d.className='item '+(r.ok?'ok':'no'); d.innerHTML=`<strong>${r.q} = ${r.ca}</strong><br>إجابتك: ${r.ua} ${r.ok?'✓':'✗'}`; list.appendChild(d); }
+  };
+
+  grid.addEventListener('click',(e)=>{ const b=e.target.closest('.card'); if(!b) return; startQuiz(parseInt(b.dataset.table,10)); });
+  btnCheck.addEventListener('click',check);
+  btnNext.addEventListener('click',()=>{ btnNext.style.display='none'; btnCheck.style.display='inline-block'; nextQ(); });
+  btnResults.addEventListener('click',()=>{ btnResults.style.display='none'; showResults(); });
+  btnChange.addEventListener('click',()=>{ quiz.style.display='none'; results.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); });
+  ansEl.addEventListener('keypress',(e)=>{ if(e.key==='Enter' && btnCheck.style.display!=='none'){ check(); } });
+
+  // Print
+  const printGrid=document.getElementById('print-grid');
+  const pcSel=document.getElementById('pc');
+  const onlyQ=document.getElementById('only-questions');
+  const btnPrint=document.getElementById('btn-print');
+  const pArea=document.getElementById('print-area');
+  const chosen=document.getElementById('print-chosen');
+
+  let pTable=null;
+  printGrid.addEventListener('click',(e)=>{
+    const b=e.target.closest('.card'); if(!b) return;
+    printGrid.querySelectorAll('.card').forEach(x=>x.classList.remove('is-selected'));
+    b.classList.add('is-selected');
+    pTable = parseInt(b.dataset.ptable,10);
+    chosen.textContent = `تم اختيار جدول ${toAr(pTable)} للطباعة`;
+  });
+
+  btnPrint.addEventListener('click',()=>{
+    if(pTable===null){ alert('من فضلك اختاري جدولًا للطباعة'); return; }
+    const count=parseInt(pcSel.value,10)||22;
+    buildAndPrintSheet(pTable, count, onlyQ.checked);
+  });
+
+  function buildAndPrintSheet(table, count, questionsOnly){
+    pArea.innerHTML='';
+    const wrap=document.createElement('div');
+
+    const title=document.createElement('div'); title.className='sheet-title';
+    title.innerHTML=`<h2>اختبار جدول الضرب - جدول ${toAr(table)}</h2><p>الاسم: _____________________  التاريخ: _____________________</p>`;
+    wrap.appendChild(title);
+
+    const nums=Array.from({length:11},(_,i)=>i), pool=[];
+    while(pool.length<count){ const s=nums.slice().sort(()=>Math.random()-.5); pool.push(...s); }
+    const take=pool.slice(0,count);
+
+    const g1=document.createElement('div'); g1.className='sheet-grid';
+    take.forEach((n,i)=>{ const d=document.createElement('div'); d.className='sheet-q'; d.innerHTML=`<strong>${toAr(i+1)}.</strong> ${toAr(table)} × ${toAr(n)} = <span class="line"></span>`; g1.appendChild(d); });
+    wrap.appendChild(g1);
+
+    if(!questionsOnly){
+      const br=document.createElement('div'); br.className='page-break'; wrap.appendChild(br);
+      const t2=document.createElement('div'); t2.className='sheet-title'; t2.innerHTML='<h2>الإجابات</h2>'; wrap.appendChild(t2);
+      const g2=document.createElement('div'); g2.className='sheet-grid';
+      take.forEach((n,i)=>{ const d=document.createElement('div'); d.className='sheet-q'; d.innerHTML=`<strong>${toAr(i+1)}.</strong> ${toAr(table)} × ${toAr(n)} = <strong>${toAr(table*n)}</strong>`; g2.appendChild(d); });
+      wrap.appendChild(g2);
+    }
+
+    pArea.appendChild(wrap);
+    window.print();
+  }
+</script>
+</body>
+</html>
